@@ -6,8 +6,12 @@
 #include <getopt.h>
 #include <math.h>
 
+
+// Typedef a memory address //
 typedef unsigned long long mem_64;
 
+
+// declare a line struct //
 typedef struct {
 
 	// Line Parameters //
@@ -21,6 +25,7 @@ typedef struct {
 
 } Line;
 
+// declare a set struct //
 typedef struct {
 
 	// Lines //
@@ -28,12 +33,13 @@ typedef struct {
 
 } Set;
 
+// declare a cache struct //
 typedef struct {
 	
 	// Cache Parameters //
 	int E;
-	int B;
-	int S;
+	mem_64 B;
+	mem_64 S;
 	int b;
 	int s;
 	int tag_size;
@@ -48,16 +54,19 @@ typedef struct {
 
 } Cache;
 
+// Builds a line. Called by set_build //
 Line line_build(int B)
 {
-	// Calloc Line //
+	
 	Line line;
-
+	// Calloc space for the block //
 	line.block = (char*) calloc(B, sizeof(char));
 
 	return line;
 }
 
+
+// Builds a set. Called by cache_build//
 Set set_build(int E, int B)
 {
 	// Calloc Set //
@@ -76,6 +85,7 @@ Set set_build(int E, int B)
 	return set;
 }
 
+// Builds a cache //
 Cache* cache_build(int s, int E, int b)
 {
 	// Calloc Cache //
@@ -92,17 +102,20 @@ Cache* cache_build(int s, int E, int b)
 	cache->evicts = 0;
 
 	// Calculate Parameters //
-	cache->S = 2^s;
-	cache->B = 2^b;
+	cache->S = 2 << s;
+	cache->B = 2 << b;
 	cache->tag_size = sizeof(mem_64) - (s + b);
 
 	int i;
 	int S = cache->S;
 	int B = cache->B;
 
+	// Calloc space for a set
 	cache->sets = (Set*) calloc(S, sizeof(Set));
 	Set* sets = cache->sets;
 
+
+	// Build an S number of sets //
 	for(i = 0; i < S; i++)
 	{
 		sets[i] = set_build(E, B);
@@ -111,6 +124,7 @@ Cache* cache_build(int s, int E, int b)
 	return cache;
 }
 
+// Frees the memory for a line. Called by set_free //
 void line_free(Line line, int B)
 {
 	char* block = line.block;
@@ -118,11 +132,14 @@ void line_free(Line line, int B)
 	return;
 }
 
+// Frees the memory for a set. Called by cache_free //
 void set_free(Set set, int E, int B)
 {
 	Line* lines = set.lines;
 	
 	int i;
+
+	//Frees all the lines using line_free
 	for(i = 0; i < E; i++)
 	{
 		line_free(lines[i], B);
@@ -133,6 +150,7 @@ void set_free(Set set, int E, int B)
 	return;
 }
 
+// Frees the entire cache //
 void cache_free(Cache* cache)
 {
 	Set* sets = cache->sets;
@@ -141,23 +159,27 @@ void cache_free(Cache* cache)
 	int B = cache->B;
 
 	int i;
+
+	// Frees the individual sets 
 	for (i = 0; i < S; i++)
 	{
 		set_free(sets[i], E, B);
 	}
 
+	// Frees the cache and sets
 	free(sets);
 	free(cache);
 	return;
 }
 
+// Searches a specific set for the proper tag-valid combination //
 int set_search(Set* set, mem_64 tag, int E)
 {
 	int i;
 	for (i = 0; i < E; i++)
 	{
 		Line line = set->lines[i];
-		if(line.tag == tag)
+		if(line.tag == tag && line.valid)
 		{
 			return 1;
 		}
@@ -178,13 +200,15 @@ void cache_search(Cache* cache, mem_64 address)
 
 	Set* search_set = &(cache->sets[set_number]);
 
+	// Call cahce_hit
 	if(set_search(search_set, tag, E))
 	{
+		printf("Successful cache_search call\n");
 		return;
 	}
-	else
+	else //Call cache miss
 	{
-		printf("Successful cache_search call\n");
+		
 		return;
 	}
 
@@ -201,6 +225,7 @@ int main(int argc, char* argv[])
 	char* t = "H";
 	FILE* trace;
 
+	//Read the flags from the console
 	char flag = getopt(argc, argv, "s:E:b:t:v");
 	do
 	{
@@ -232,9 +257,10 @@ int main(int argc, char* argv[])
 		}
 	} while ((flag = getopt(argc, argv, "s:E:b:t:v")) != -1);
 
+	//Check that valid arguments were provided.
 	if (s == 0 || E == 0 || b == 0 || t == NULL)
 	{
-		printf("Please Provide All Arguments for the Cache\n");
+		printf("Please Provide Valid Arguments for the Cache\n");
 		return -1;
 	}
 
@@ -274,6 +300,8 @@ int main(int argc, char* argv[])
 	Cache* cache = cache_build(s,E,b);
 	cache_search(cache, 5);
     printSummary(0, 0, 0);
+
+    //Wrap it up.
     fclose(trace);
     cache_free(cache);
 
