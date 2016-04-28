@@ -151,6 +151,46 @@ void cache_free(Cache* cache)
 	return;
 }
 
+int set_search(Set* set, mem_64 tag, int E)
+{
+	int i;
+	for (i = 0; i < E; i++)
+	{
+		Line line = set->lines[i];
+		if(line.tag == tag)
+		{
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+void cache_search(Cache* cache, mem_64 address)
+{
+	int b = cache->b;
+	int s = cache->s;
+	int E = cache->E;
+	int tag_size = cache->tag_size;
+
+	int set_number = (address >> b) & ~(~0 << s);
+	int tag = (address >> (s + b)) & ~(~0 << tag_size);
+
+	Set* search_set = &(cache->sets[set_number]);
+
+	if(set_search(search_set, tag, E))
+	{
+		return;
+	}
+	else
+	{
+		printf("Successful cache_search call\n");
+		return;
+	}
+
+
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -232,10 +272,10 @@ int main(int argc, char* argv[])
 	printf("%s\n", t);
 
 	Cache* cache = cache_build(s,E,b);
+	cache_search(cache, 5);
     printSummary(0, 0, 0);
     fclose(trace);
     cache_free(cache);
 
     return 0;
 }
-
