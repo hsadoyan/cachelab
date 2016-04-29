@@ -105,7 +105,7 @@ Cache* cache_build(int s, int E, int b)
 	// Calculate Parameters //
 	cache->S = 2 << s;
 	cache->B = 2 << b;
-	cache->tag_size = sizeof(mem_64) - (s + b);
+	cache->tag_size = (sizeof(mem_64)*8) - (s + b);
 
 	int i;
 	int S = cache->S;
@@ -177,11 +177,11 @@ void cache_free(Cache* cache)
 Line* set_search(Set* set, mem_64 tag, int E)
 {
 	int i;
-	Line line; 
+	Line* line = NULL; 
 	for (i = 0; i < E; i++)
 	{
-		line = set->lines[i];
-		if(line.tag == tag && line.valid)
+		line = &(set->lines[i]);
+		if(line->tag == tag && line->valid)
 		{
 			return &(set->lines[i]);
 		}
@@ -192,6 +192,7 @@ Line* set_search(Set* set, mem_64 tag, int E)
 void cache_hit(Cache* cache, Set* search_set, Line* found_line, int E)
 {
 	int i;
+	printf("Hit\n");
 	for(i = 0; i < E; i++)
 	{
 		Line* current_line = &(search_set->lines[i]);
@@ -209,6 +210,7 @@ void cache_hit(Cache* cache, Set* search_set, Line* found_line, int E)
 }
 void cache_miss(Cache* cache, Set* search_set, int E, mem_64 tag)
 {
+	printf("Miss\n");
 	cache->misses++;
 	Line* oldest_line = NULL;
 	int i;
@@ -228,6 +230,7 @@ void cache_miss(Cache* cache, Set* search_set, int E, mem_64 tag)
 		}
 	}
 
+	printf("Evict\n");
 	oldest_line->tag = tag;
 	oldest_line->age = 0;
 	cache->evicts++;
