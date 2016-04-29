@@ -183,36 +183,33 @@ Line* set_search(Set* set, mem_64 tag, int E)
 		line = &(set->lines[i]);
 		if(line->tag == tag && line->valid)
 		{
-			return &(set->lines[i]);
+			return line;
 		}
 	}
 
 	return NULL;
 }
-void cache_hit(Cache* cache, Set* search_set, Line* found_line, int E)
+void increase_age(Set* search_set, int E)
 {
 	int i;
-	printf("Hit\n");
 	for(i = 0; i < E; i++)
 	{
 		Line* current_line = &(search_set->lines[i]);
-		if (current_line != found_line)
-		{
-			current_line->age++;
-		}
-		else
-		{
-			current_line->age = 0;
-		}
+		current_line->age++;
 	}
+}
+void cache_hit(Cache* cache, Set* search_set, Line* found_line, int E)
+{
+	increase_age(search_set, E);
+	found_line->age = 0;
 	cache->hits++;
 	return;
 }
 void cache_miss(Cache* cache, Set* search_set, int E, mem_64 tag)
 {
-	printf("Miss\n");
 	cache->misses++;
 	Line* oldest_line = NULL;
+	increase_age(search_set, E);
 	int i;
 	for (i = 0; i < E; i++)
 	{
@@ -230,7 +227,6 @@ void cache_miss(Cache* cache, Set* search_set, int E, mem_64 tag)
 		}
 	}
 
-	printf("Evict\n");
 	oldest_line->tag = tag;
 	oldest_line->age = 0;
 	cache->evicts++;
@@ -273,7 +269,7 @@ int main(int argc, char* argv[])
 	int s;
 	int E;
 	int b;
-	char* t = "H";
+	char* t;
 	FILE* trace;
 
 
