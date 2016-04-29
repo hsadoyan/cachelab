@@ -61,6 +61,7 @@ Line line_build(int B)
 	Line line;
 	// Calloc space for the block //
 	line.block = (char*) calloc(B, sizeof(char));
+	line.valid = 0;
 
 	return line;
 }
@@ -173,19 +174,65 @@ void cache_free(Cache* cache)
 }
 
 // Searches a specific set for the proper tag-valid combination //
-int set_search(Set* set, mem_64 tag, int E)
+Line* set_search(Set* set, mem_64 tag, int E)
 {
 	int i;
+	Line line; 
 	for (i = 0; i < E; i++)
 	{
-		Line line = set->lines[i];
+		line = set->lines[i];
 		if(line.tag == tag && line.valid)
 		{
-			return 1;
+			return &(set->lines[i]);
 		}
 	}
 
-	return 0;
+	return NULL;
+}
+void cache_hit(Cache* cache, Set* search_set, Line* found_line, int E)
+{
+	int i;
+	for(i = 0; i < E; i++)
+	{
+		Line* current_line = &(search_set->lines[i]);
+		if (current_line != found_line)
+		{
+			current_line->age++;
+		}
+		else
+		{
+			current_line->age = 0;
+		}
+	}
+	cache->hits++;
+	return;
+}
+void cache_miss(Cache* cache, Set* search_set, int E, mem_64 tag)
+{
+	cache->misses++;
+	Line* oldest_line = NULL;
+	int i;
+	for (i = 0; i < E; i++)
+	{
+		Line* current_line = &(search_set->lines[i]);
+		if (!current_line->valid)
+		{
+			current_line->tag = tag;
+			current_line->age = 0;
+			current_line->valid = 1;
+			return;
+		}
+		else if(oldest_line == NULL || current_line->age > oldest_line->age)
+		{
+			oldest_line = current_line;
+		}
+	}
+
+	oldest_line->tag = tag;
+	oldest_line->age = 0;
+	cache->evicts++;
+	return;
+
 }
 
 void cache_search(Cache* cache, mem_64 address)
@@ -196,34 +243,36 @@ void cache_search(Cache* cache, mem_64 address)
 	int tag_size = cache->tag_size;
 
 	int set_number = (address >> b) & ~(~0 << s);
-	int tag = (address >> (s + b)) & ~(~0 << tag_size);
+	mem_64 tag = (address >> (s + b)) & ~(~0 << tag_size);
 
 	Set* search_set = &(cache->sets[set_number]);
+	Line* found_line = set_search(search_set, tag, E);
 
-	// Call cahce_hit
-	if(set_search(search_set, tag, E))
+	// Call cache_hit
+	if(found_line != NULL)
 	{
-		printf("Successful cache_search call\n");
+		cache_hit(cache, search_set, found_line, E);
 		return;
 	}
-	else //Call cache miss
+	else //Call cache_miss
 	{
-		
+		cache_miss(cache, search_set, E, tag);
 		return;
 	}
 
 
 }
 
+int v = 0;
 
 int main(int argc, char* argv[])
 {
-	int v = 0;
 	int s;
 	int E;
 	int b;
 	char* t = "H";
 	FILE* trace;
+
 
 	//Read the flags from the console
 	char flag = getopt(argc, argv, "s:E:b:t:v");
@@ -264,6 +313,8 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
+	Cache* cache = cache_build(s,E,b);
+
 	// Open and Read Trace File //
 	trace = fopen(t, "r");
 	if(trace != NULL)
@@ -271,17 +322,21 @@ int main(int argc, char* argv[])
 		char instruction;
 		mem_64 address;
 		int size; 
-		while(fscanf(trace,"%c %llx,%d", &instruction, &address, &size) == 3)
+		while(fscanf(trace, " %c %llx,%d", &instruction, &address, &size) == 3)
 		{
 			switch(instruction)
 			{
 				case 'L':
+				cache_search(cache, address);
 				break;
 
 				case 'S':
+				cache_search(cache, address);
 				break;
 
 				case'M':
+				cache_search(cache, address);
+				cache_search(cache, address);
 				break;
 
 				default:
@@ -294,12 +349,8 @@ int main(int argc, char* argv[])
 		printf("Please provide a trace file\n");
 	}
 
-	printf("%d\n", v);
-	printf("%s\n", t);
 
-	Cache* cache = cache_build(s,E,b);
-	cache_search(cache, 5);
-    printSummary(0, 0, 0);
+    printSummary(cache->hits, cache->misses, cache->evicts);
 
     //Wrap it up.
     fclose(trace);
