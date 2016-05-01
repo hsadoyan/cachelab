@@ -22,42 +22,22 @@ int is_transpose(int M, int N, int A[N][M], int B[M][N]);
 char transpose_submit_desc[] = "Transpose submission";
 void transpose_submit(int M, int N, int A[N][M], int B[M][N])
 {
-	int bh = 32;
-	int bw = 8;
+	int bh;
+	int bw;
 	int i, j, k, l;
-//	int temp = 0;
-	//	int dioganal = 0; 
+ 
 	int currentRow, currentCol;
 	if(M == 64 && N == 64)
 	{
-		//Iterate through the columns
-		for (k = 0; k < N; k += 4) 
-		{
-			for (l = 0; l < N; l += 4) 
-			{
-				//Iterate through the rows      
-				for (i = l; i < l + 4; i ++) 
-				{
-					for (j = k; j < k + 4; j ++) 
-					{
-						if (i != j) //If Not on the dioganal 
-						{
-							B[j][i] = A[i][j];
-						}
-						else { //If on the dioganal
-
-							B[i][j] = A[i][j];
-						}
-					}
-
-				}   
-
-			}
-		}
-
+		bh = 16;  //16
+		bw = 4;  //4
 	}
+
 	else
 	{
+		bh = 32;
+		bw = 8;
+	}
 
 		for (i = 0; i < N; i += bh)
 		{
@@ -86,14 +66,13 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
 					}
 
 					if (j <= k && k < currentCol) 
-					//if(k == l)
 					{
 						B[k][k] = A[k][k];
 					}
 				}
 			}
 		}
-	} 
+	
 }
 
 /* 
@@ -108,84 +87,6 @@ char trans_desc[] = "Simple row-wise scan transpose";
 void trans(int M, int N, int A[N][M], int B[M][N])
 {
 
-	int bh = 32;
-	int bw = 8;
-	int i, j, k, l;
-//	int temp = 0;
-	//	int dioganal = 0; 
-	int currentRow, currentCol;
-	if(M == 64 && N == 64)
-	{
-		//Iterate through matrix using column-major iteration over blocks
-		for (k = 0; k < N; k += 4) 
-		{
-			for (l = 0; l < N; l += 4) 
-			{
-				//Iterate over each row using row-major iteration           
-				for (i = l; i < l + 4; i ++) 
-				{
-					for (j = k; j < k + 4; j ++) 
-					{
-						if (i != j) //If Not on th dioganal 
-						{
-							B[j][i] = A[i][j];
-						}
-						else {
-
-							//temp = A[i][j];
-							//dioganal = i;
-							B[i][j] = A[i][j];
-						}
-					}
-
-					//			if (l == k) 
-					//			{
-					//				B[dioganal][dioganal] = temp;
-					//			}
-				}   
-
-			}
-		}
-
-	}
-	else
-	{
-
-		for (i = 0; i < N; i += bh)
-		{
-			currentRow = i+bh;
-			if (currentRow > N) 
-			{
-				currentRow = N;
-			}
-
-			for (j = 0; j < M; j+= bw)
-			{
-				currentCol = j+bw;
-				if (currentCol > M) 
-				{ 
-					currentCol = M;
-				}
-
-				for (k = i; k < currentRow; k++)
-				{
-					for (l = j; l < currentCol; l++)
-					{
-						if (k != l)
-						{
-							B[l][k] = A[k][l];
-						}
-					}
-
-					if (j <= k && k < currentCol) 
-					//if(k == l)
-					{
-						B[k][k] = A[k][k];
-					}
-				}
-			}
-		}
-	} 
 
 }
 
