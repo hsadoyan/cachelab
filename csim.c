@@ -1,3 +1,7 @@
+// Bradford Bonanno //
+// Harutyun Sadoyan //
+// bwbonanno-hsadoyan //
+
 #include "cachelab.h"
 #include <stdlib.h>
 #include <strings.h>
@@ -72,12 +76,12 @@ Set set_build(int E, int B)
 {
 	// Calloc Set //
 	Set set;
-
 	set.lines = (Line*) calloc(E, sizeof(Line));
 
 
 	int i;
 	Line* lines = set.lines;
+	// Iterate through and Build Lines //
 	for (i = 0; i < E; i++)
 	{
 		lines[i] = line_build(B);
@@ -107,6 +111,7 @@ Cache* cache_build(int s, int E, int b)
 	cache->B = 2 << b;
 	cache->tag_size = (sizeof(mem_64)*8) - (s + b);
 
+	// Relevant Parametersfor Building Set //
 	int i;
 	int S = cache->S;
 	int B = cache->B;
@@ -178,9 +183,11 @@ Line* set_search(Set* set, mem_64 tag, int E)
 {
 	int i;
 	Line* line = NULL; 
+	// Search All Lines in Set //
 	for (i = 0; i < E; i++)
 	{
 		line = &(set->lines[i]);
+		// Match Tag and Valid Bit //
 		if(line->tag == tag && line->valid)
 		{
 			return line;
@@ -189,6 +196,7 @@ Line* set_search(Set* set, mem_64 tag, int E)
 
 	return NULL;
 }
+// Increment Age of All Lines //
 void increase_age(Set* search_set, int E)
 {
 	int i;
@@ -198,62 +206,66 @@ void increase_age(Set* search_set, int E)
 		current_line->age++;
 	}
 }
+// Procedure for a Cache Hit //
 void cache_hit(Cache* cache, Set* search_set, Line* found_line, int E)
 {
-	increase_age(search_set, E);
-	found_line->age = 0;
-	cache->hits++;
+	increase_age(search_set, E); // Increment Ages //
+	found_line->age = 0; // Reset Found_Line Age //
+	cache->hits++; // Increment Cache Hit Count //
 	return;
 }
+// Procedure for a Cache Miss //
 void cache_miss(Cache* cache, Set* search_set, int E, mem_64 tag)
 {
-	cache->misses++;
+	cache->misses++; // Increment Cache Miss Count //
 	Line* oldest_line = NULL;
-	increase_age(search_set, E);
+	increase_age(search_set, E); // Increment Ages //
 	int i;
 	for (i = 0; i < E; i++)
 	{
 		Line* current_line = &(search_set->lines[i]);
-		if (!current_line->valid)
+		if (!current_line->valid) // Checks For Empty Line //
 		{
-			current_line->tag = tag;
-			current_line->age = 0;
-			current_line->valid = 1;
+			current_line->tag = tag; // Initializes Tag //
+			current_line->age = 0; // Initializes Age //
+			current_line->valid = 1; // Set Valid (Filled Line Now) //
 			return;
 		}
-		else if(oldest_line == NULL || current_line->age > oldest_line->age)
+		// Replaces Oldest Line if Age of Current Line is Greater //
+		else if(oldest_line == NULL || current_line->age > oldest_line->age) 
 		{
 			oldest_line = current_line;
 		}
 	}
 
-	oldest_line->tag = tag;
-	oldest_line->age = 0;
-	cache->evicts++;
+	oldest_line->tag = tag; // Changes Tag //
+	oldest_line->age = 0; // Resets Age //
+	cache->evicts++; // Increments Cache Evict Count //
 	return;
 
 }
-
+// Searches Cache For Address //
 void cache_search(Cache* cache, mem_64 address)
 {
-	int b = cache->b;
+	// Relevant ParametersFrom Cache //
+	int b = cache->b; 
 	int s = cache->s;
 	int E = cache->E;
 	int tag_size = cache->tag_size;
 
-	int set_number = (address >> b) & ~(~0 << s);
-	mem_64 tag = (address >> (s + b)) & ~(~0 << tag_size);
+	int set_number = (address >> b) & ~(~0 << s); // Mask Relevant Set Number from Address //
+	mem_64 tag = (address >> (s + b)) & ~(~0 << tag_size); // Mask Tag to Search For //
 
-	Set* search_set = &(cache->sets[set_number]);
-	Line* found_line = set_search(search_set, tag, E);
+	Set* search_set = &(cache->sets[set_number]); // Set Based on Masked Number //
+	Line* found_line = set_search(search_set, tag, E); // Search Set for Line Matching Tag //
 
-	// Call cache_hit
+	// Call cache_hit if found //
 	if(found_line != NULL)
 	{
 		cache_hit(cache, search_set, found_line, E);
 		return;
 	}
-	else //Call cache_miss
+	else //Call cache_miss if not found //
 	{
 		cache_miss(cache, search_set, E, tag);
 		return;
@@ -266,6 +278,7 @@ int v = 0;
 
 int main(int argc, char* argv[])
 {
+	// Input Parameters //
 	int s;
 	int E;
 	int b;
@@ -305,22 +318,26 @@ int main(int argc, char* argv[])
 		}
 	} while ((flag = getopt(argc, argv, "s:E:b:t:v")) != -1);
 
-	//Check that valid arguments were provided.
+	// Check that valid arguments were provided //
 	if (s == 0 || E == 0 || b == 0 || t == NULL)
 	{
 		printf("Please Provide Valid Arguments for the Cache\n");
 		return -1;
 	}
 
+	// Build Cache Based On Input Parameters //
 	Cache* cache = cache_build(s,E,b);
 
 	// Open and Read Trace File //
 	trace = fopen(t, "r");
 	if(trace != NULL)
 	{
+		// Relevant Variables for Reading //
 		char instruction;
 		mem_64 address;
 		int size; 
+
+		// Read File Through //
 		while(fscanf(trace, " %c %llx,%d", &instruction, &address, &size) == 3)
 		{
 			switch(instruction)
@@ -334,8 +351,8 @@ int main(int argc, char* argv[])
 				break;
 
 				case'M':
-				cache_search(cache, address);
-				cache_search(cache, address);
+				cache_search(cache, address); // Data Load //
+				cache_search(cache, address); // Data Store //
 				break;
 
 				default:
@@ -348,10 +365,10 @@ int main(int argc, char* argv[])
 		printf("Please provide a trace file\n");
 	}
 
-
+	// Print Resulting Hits, Misses, Evictions //
     printSummary(cache->hits, cache->misses, cache->evicts);
 
-    //Wrap it up.
+    // Wrap it up //
     fclose(trace);
     cache_free(cache);
 
