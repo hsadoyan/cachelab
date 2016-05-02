@@ -43,7 +43,7 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
 	// The 32x32 and irregular sized matrix case //
 	else
 	{
-		block_height = 8;
+		block_height = 16;
 		block_width = 8;
 	}
 
