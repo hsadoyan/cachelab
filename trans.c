@@ -22,56 +22,65 @@ int is_transpose(int M, int N, int A[N][M], int B[M][N]);
 char transpose_submit_desc[] = "Transpose submission";
 void transpose_submit(int M, int N, int A[N][M], int B[M][N])
 {
-	int bh;
-	int bw;
-	int i, j, k, l;
- 
+	// Block height and width //
+	int block_height; 
+	int block_width;
+
+	// Loop iterators //
+	int i, j, iblock, jblock; 
+
+	// Stores the row and column we're working with //
 	int currentRow, currentCol;
+
+	// The 64x64 case //
 	if(M == 64 && N == 64)
 	{
-		bh = 16;  //16
-		bw = 4;  //4
-	}
+		block_height = 4;  //16
+		block_width = 4;  //4
 
+
+	}
+	// The 32x32 and irregular sized matrix case //
 	else
 	{
-		bh = 32;
-		bw = 8;
+		block_height = 16;
+		block_width = 8;
 	}
 
-		for (i = 0; i < N; i += bh)
+	for (i = 0; i < N; i += block_height)
+	{
+		currentRow = i + block_height;
+
+		if (currentRow > N) 
 		{
-			currentRow = i+bh;
-			if (currentRow > N) 
-			{
-				currentRow = N;
+			currentRow = N;
+		}
+
+		for (j = 0; j < M; j+= block_width)
+		{
+			currentCol = j+block_width;
+		
+			if (currentCol > M) 
+			{ 
+				currentCol = M;
 			}
-
-			for (j = 0; j < M; j+= bw)
+		
+			for (iblock = i; iblock < currentRow; iblock++)
 			{
-				currentCol = j+bw;
-				if (currentCol > M) 
-				{ 
-					currentCol = M;
-				}
-
-				for (k = i; k < currentRow; k++)
+				for (jblock = j; jblock < currentCol; jblock++)
 				{
-					for (l = j; l < currentCol; l++)
+					if (iblock != jblock)
 					{
-						if (k != l)
-						{
-							B[l][k] = A[k][l];
-						}
+						B[jblock][iblock] = A[iblock][jblock];
 					}
-
-					if (j <= k && k < currentCol) 
-					{
-						B[k][k] = A[k][k];
-					}
+				}
+				if (j <= iblock && iblock < jblock) 
+				{
+					B[iblock][iblock] = A[iblock][iblock];
 				}
 			}
 		}
+	}
 	
 }
 
@@ -86,6 +95,75 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
 char trans_desc[] = "Simple row-wise scan transpose";
 void trans(int M, int N, int A[N][M], int B[M][N])
 {
+	// Block height and width //
+	int block_height; 
+	int block_width;
+
+	// Loop iterators //
+	int i, j, iblock, jblock; 
+
+	// Stores the row and column we're working with //
+	//int currentRow, 
+	//int currentCol;
+
+	int tempi = 0;
+	int tempj = 0;
+
+	
+
+	// The 64x64 case //
+	if(M == 64 && N == 64)
+	{
+		block_height = 4;  //16
+		block_width = 4;  //4
+
+
+	}
+	// The 32x32 and irregular sized matrix case //
+	else
+	{
+		block_height = 16;
+		block_width = 8;
+	}
+
+
+	for (i = block_height; i < N + block_height; i += block_height)
+	{
+	//  currentRow = i;
+		tempi = i - block_height;
+
+		if (i > N) 
+		{
+			i = N;
+		}
+
+		for (j = block_width; j < M + block_width; j+= block_width)
+		{
+			tempj = j - block_width;
+		
+			if (j > M) 
+			{ 
+				j = M;
+			}
+		
+			for (iblock = tempi; iblock < i; iblock++)
+			{
+				for (jblock = tempj; jblock < j; jblock++)
+				{
+					if (iblock != jblock)
+					{
+						B[jblock][iblock] = A[iblock][jblock];
+					}
+			
+				}
+				if (tempj <= iblock && iblock < jblock)
+				//if(i == j) 
+				{
+					B[iblock][iblock] = A[iblock][iblock];
+				}
+			}
+		}
+	}
 
 
 }
