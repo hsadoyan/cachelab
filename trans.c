@@ -29,13 +29,13 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
 	// Loop iterators //
 	int i, j, iblock, jblock; 
 
-	// Stores the row and column we're working with //
+	// Stores the upper bound of the block //
 	int currentRow, currentCol;
 
 	// The 64x64 case //
 	if(M == 64 && N == 64)
 	{
-		block_height = 4;  //16
+		block_height = 8;  //16
 		block_width = 4;  //4
 
 
@@ -43,44 +43,60 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
 	// The 32x32 and irregular sized matrix case //
 	else
 	{
-		block_height = 16;
+		block_height = 8;
 		block_width = 8;
 	}
 
+  // Iterate through the blocks by height //
 	for (i = 0; i < N; i += block_height)
 	{
-		currentRow = i + block_height;
+		currentRow = i + block_height; //Stores the upper bound of the height
 
-		if (currentRow > N) 
+		if (currentRow > N) //Account for overflow if matrix not square
 		{
 			currentRow = N;
 		}
 
+		// Iterate through the blocks by width //
 		for (j = 0; j < M; j+= block_width)
 		{
-			currentCol = j+block_width;
+			currentCol = j+block_width; //Stores the upper bound of the width
 		
-			if (currentCol > M) 
+			if (currentCol > M) //check for overflow
 			{ 
 				currentCol = M;
 			}
-		
+
+			
+			// Iterate through the individual blocks permorming the transpose //
+
+			// Iterate through block height //
 			for (iblock = i; iblock < currentRow; iblock++)
 			{
+				//Iterate through block width //
 				for (jblock = j; jblock < currentCol; jblock++)
 				{
+
+					//Perform the transpose for values not on the diagonal
 					if (iblock != jblock)
 					{
 						B[jblock][iblock] = A[iblock][jblock];
 					}
 				}
-				if (j <= iblock && iblock < jblock) 
+
+				// Handle values on the diagonal //
+				if (j <= iblock && iblock <  jblock) 
 				{
+				
 					B[iblock][iblock] = A[iblock][iblock];
 				}
 			}
+
+		
 		}
 	}
+
+
 	
 }
 
@@ -95,6 +111,8 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
 char trans_desc[] = "Simple row-wise scan transpose";
 void trans(int M, int N, int A[N][M], int B[M][N])
 {
+
+	
 	// Block height and width //
 	int block_height; 
 	int block_width;
@@ -114,7 +132,7 @@ void trans(int M, int N, int A[N][M], int B[M][N])
 	// The 64x64 case //
 	if(M == 64 && N == 64)
 	{
-		block_height = 4;  //16
+		block_height = 8;  //16
 		block_width = 4;  //4
 
 
@@ -122,15 +140,17 @@ void trans(int M, int N, int A[N][M], int B[M][N])
 	// The 32x32 and irregular sized matrix case //
 	else
 	{
-		block_height = 16;
+		block_height = 24;
 		block_width = 8;
 	}
+
+	tempi = 0-block_height;
 
 
 	for (i = block_height; i < N + block_height; i += block_height)
 	{
 	//  currentRow = i;
-		tempi = i - block_height;
+		tempi += block_height;
 
 		if (i > N) 
 		{
@@ -145,6 +165,8 @@ void trans(int M, int N, int A[N][M], int B[M][N])
 			{ 
 				j = M;
 			}
+
+
 		
 			for (iblock = tempi; iblock < i; iblock++)
 			{
@@ -157,13 +179,20 @@ void trans(int M, int N, int A[N][M], int B[M][N])
 			
 				}
 				if (tempj <= iblock && iblock < jblock)
-				//if(i == j) 
 				{
 					B[iblock][iblock] = A[iblock][iblock];
 				}
 			}
 		}
 	}
+	
+
+//	int i = 0;
+
+//	for (i = 0; i< (M*N); i+= M+1)
+//	{
+//		**(B+i) = **(A+i);
+//	}
 
 
 }
